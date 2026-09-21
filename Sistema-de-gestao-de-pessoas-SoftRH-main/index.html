@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (() => {
+            const autenticado = localStorage.getItem('softrh_autenticado');
+            const loginTime = Number(localStorage.getItem('softrh_login_time'));
+            const sessionLimit = 30 * 60 * 1000;
+            const sessionAge = Date.now() - loginTime;
+            const sessaoValida = autenticado === 'true'
+                && Number.isFinite(loginTime)
+                && sessionAge >= 0
+                && sessionAge < sessionLimit;
+
+            if (!sessaoValida) {
+                localStorage.removeItem('softrh_autenticado');
+                localStorage.removeItem('softrh_login_time');
+                alert('Sua sessão é inválida ou expirou. Faça login novamente.');
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
+    <title>Soft RH - Sistema de Gestão de Recursos Humanos</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/responsive.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- SEO improvements added by assistant -->
+    <meta name="description" content="SoftRH - Dashboard de RH com painéis de funcionários, recrutamento, férias e documentos.">
+    <meta name="robots" content="index,follow">
+    <meta property="og:site_name" content="SoftRH">
+    <meta property="og:title" content="Soft RH - Sistema de Gestão de Recursos Humanos">
+    <meta property="og:description" content="SoftRH - Dashboard de RH com painéis de funcionários, recrutamento, férias e documentos.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Soft RH - Sistema de Gestão de Recursos Humanos">
+    <meta name="twitter:description" content="SoftRH - Dashboard de RH com painéis de funcionários, recrutamento, férias e documentos.">
+    <!-- Preload critical CSS -->
+    <link rel="preload" href="css/style.css" as="style">
+    <!-- Preconnect to common origins (if any external APIs used) -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- end of assistant head injections -->
+
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-users"></i>
+                    <span>Soft RH</span>
+                </div>
+                <button class="sidebar-toggle" id="sidebarToggle" aria-label="Alternar menu lateral">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li class="menu-item active" data-section="dashboard">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </li>
+                <li class="menu-item" data-section="funcionarios">
+                    <i class="fas fa-user-tie"></i>
+                    <span>Funcionários</span>
+                </li>
+                <li class="menu-item" data-section="recrutamento">
+                    <i class="fas fa-search"></i>
+                    <span>Recrutamento</span>
+                </li>
+                <li class="menu-item" data-section="treinamento">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>Treinamento</span>
+                </li>
+                <li class="menu-item" data-section="documentos">
+                    <i class="fas fa-file-contract"></i>
+                    <span>Documentos</span>
+                </li>
+                <li class="menu-item" data-section="ferias">
+                    <i class="fas fa-umbrella-beach"></i>
+                    <span>Férias</span>
+                </li>
+                <li class="menu-item" data-section="avaliacao">
+                    <i class="fas fa-star"></i>
+                    <span>Avaliação</span>
+                </li>
+                <li class="menu-item" data-section="relatorios">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Relatórios</span>
+                </li>
+                <li class="menu-item" data-section="configuracoes">
+                    <i class="fas fa-cog"></i>
+                    <span>Configurações</span>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 id="pageTitle">Dashboard</h1>
+<div class="dashboard-cards" style="display:flex;flex-wrap:wrap;gap:20px;margin-top:20px;">
+    <div class="card kpi"><span id="totalFuncionarios">0</span><p>Total de Funcionários</p></div>
+    <div class="card kpi"><span id="novosFuncionarios">0</span><p>Novos Contratados</p></div>
+    <div class="card kpi"><span id="taxaSatisfacao">0%</span><p>Taxa de Satisfação</p></div>
+    <div class="card kpi"><span id="custoRH">R$ 0</span><p>Custo Mensal RH</p></div>
+    <div class="card kpi"><span id="totalDocumentos">0</span><p>Total de Documentos</p></div>
+    <div class="card kpi"><span id="feriasPendentes">0</span><p>Férias Pendentes</p></div>
+</div>
+
+                </div>
+                <div class="header-right">
+                    <div class="search-bar">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Pesquisar funcionário..." id="globalSearch">
+                    </div>
+                    <div class="user-menu" id="userMenu" role="button" tabindex="0" aria-expanded="false" aria-haspopup="true">
+                        <div class="user-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <span>Administrador</span>
+                        <div class="user-dropdown" id="userDropdown">
+                            <button type="button" class="user-dropdown-action" id="logoutButton">
+                                <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+                                <span>Sair</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- Dashboard Section -->
+                <section id="dashboard" class="section active">
+                    <div class="section-header">
+                        <div>
+                            <h2>Visão geral do RH</h2>
+                            <p>Acompanhe os principais indicadores da empresa</p>
+                        </div>
+                        <div class="section-actions dashboard-actions">
+                            <select class="dashboard-filter" aria-label="Período do dashboard">
+                                <option value="all">Todo o período</option>
+                                <option value="30">Últimos 30 dias</option>
+                                <option value="180">Últimos 6 meses</option>
+                                <option value="365">Último ano</option>
+                            </select>
+                            <button class="btn btn-secondary refresh-dashboard">
+                                <i class="fas fa-sync-alt"></i> Atualizar
+                            </button>
+                            <button class="btn btn-primary" id="exportDashboardBtn">
+                                <i class="fas fa-download"></i> Exportar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="charts-grid">
+                        <div class="chart-container">
+                            <h3>Funcionários por departamento</h3>
+                            <div class="chart-area"><canvas id="departamentoChart"></canvas></div>
+                        </div>
+                        <div class="chart-container">
+                            <h3>Contratações ao longo do tempo</h3>
+                            <div class="chart-area"><canvas id="contratacoesChart"></canvas></div>
+                        </div>
+                        <div class="chart-container">
+                            <h3>Distribuição das avaliações</h3>
+                            <div class="chart-area"><canvas id="satisfacaoChart"></canvas></div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-panels">
+                        <div class="dashboard-panel">
+                            <h3>Próximos aniversários</h3>
+                            <div id="proximosAniversarios"></div>
+                        </div>
+                        <div class="dashboard-panel">
+                            <h3>Alertas importantes</h3>
+                            <div id="alertasImportantes"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Funcionários Section -->
+                <section id="funcionarios" class="section">
+                    <div class="section-header">
+                        <h2>Gestão de Funcionários</h2>
+                        <p>Gerencie todos os colaboradores da empresa</p>
+                    </div>
+
+                    <div class="section-actions">
+                        <button class="btn btn-primary" id="addFuncionario">
+                            <i class="fas fa-plus"></i>
+                            Adicionar Funcionário
+                        </button>
+                        <div class="filters">
+                            <select id="departamentoFilter">
+                                <option value="">Todos os Departamentos</option>
+                                <option value="TI">Tecnologia</option>
+                                <option value="RH">Recursos Humanos</option>
+                                <option value="Vendas">Vendas</option>
+                                <option value="Marketing">Marketing</option>
+                                <option value="Financeiro">Financeiro</option>
+                            </select>
+                            <select id="statusFilter">
+                                <option value="">Todos os Status</option>
+                                <option value="ativo">Ativo</option>
+                                <option value="ferias">De Férias</option>
+                                <option value="afastado">Afastado</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table" id="funcionariosTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nome</th>
+                                    <th>Cargo</th>
+                                    <th>Departamento</th>
+                                    <th>Email</th>
+                                    <th>Data Admissão</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="funcionariosTableBody">
+                                <!-- Dados serão inseridos via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Recrutamento Section -->
+                <section id="recrutamento" class="section">
+                    <div class="section-header">
+                        <h2>Recrutamento e Seleção</h2>
+                        <p>Gerencie processos seletivos e candidatos</p>
+                    </div>
+
+                    <div class="section-actions">
+                        <button class="btn btn-primary" id="addVaga">
+                            <i class="fas fa-plus"></i>
+                            Nova Vaga
+                        </button>
+                    </div>
+
+                    <div class="vagas-grid" id="vagasGrid">
+                        <!-- Cards de vagas serão inseridos via JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Treinamento Section -->
+                <section id="treinamento" class="section">
+                    <div class="section-header">
+                        <h2>Gestão de Treinamentos</h2>
+                        <p>Organize e acompanhe programas de capacitação</p>
+                    </div>
+
+                    <div class="section-actions">
+                        <button class="btn btn-primary" id="addTreinamento">
+                            <i class="fas fa-plus"></i>
+                            Novo Treinamento
+                        </button>
+                    </div>
+
+                    <div class="treinamentos-container" id="treinamentosContainer">
+                        <!-- Treinamentos serão inseridos via JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Avaliação Section -->
+                <section id="avaliacao" class="section">
+                    <div class="section-header">
+                        <h2>Avaliação de Desempenho</h2>
+                        <p>Avalie o desempenho dos colaboradores</p>
+                    </div>
+
+                    <div class="section-actions">
+                        <button class="btn btn-primary" id="addAvaliacao">
+                            <i class="fas fa-plus"></i>
+                            Nova Avaliação
+                        </button>
+                    </div>
+
+                    <div class="avaliacoes-container" id="avaliacoesContainer">
+                        <!-- Avaliações serão inseridas via JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Relatórios Section -->
+                <section id="relatorios" class="section">
+                    <div class="section-header">
+                        <h2>Relatórios e Analytics</h2>
+                        <p>Gere relatórios detalhados sobre o RH</p>
+                    </div>
+
+                    <div class="relatorios-grid">
+                        <div class="relatorio-card">
+                            <h3>Relatório de Funcionários</h3>
+                            <p>Análise completa dos dados de funcionários</p>
+                            <button class="btn btn-secondary" data-report="funcionarios">Gerar Relatório</button>
+                        </div>
+                        <div class="relatorio-card">
+                            <h3>Análise de Desempenho</h3>
+                            <p>Métricas de avaliação e produtividade</p>
+                            <button class="btn btn-secondary" data-report="desempenho">Gerar Relatório</button>
+                        </div>
+                        <div class="relatorio-card">
+                            <h3>Relatório de Recrutamento</h3>
+                            <p>Eficácia dos processos seletivos</p>
+                            <button class="btn btn-secondary" data-report="recrutamento">Gerar Relatório</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Documentos Section -->
+                <section id="documentos" class="section">
+                    <div class="section-header">
+                        <h2>Gestão de Documentos</h2>
+                        <p>Gerencie documentos e arquivos de RH</p>
+                    </div>
+
+                    <div class="section-actions">
+                        <button class="btn btn-primary" id="addDocumento">
+                            <i class="fas fa-plus"></i>
+                            Adicionar Documento
+                        </button>
+                        <div class="filters">
+                            <select id="tipoDocumentoFilter">
+                                <option value="">Todos os Tipos</option>
+                                <option value="contrato">Contratos</option>
+                                <option value="rg">RG</option>
+                                <option value="cpf">CPF</option>
+                                <option value="cnh">CNH</option>
+                                <option value="certificado">Certificados</option>
+                                <option value="outro">Outros</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table" id="documentosTable">
+                            <thead>
+                                <tr>
+                                    <th>Funcionário</th>
+                                    <th>Tipo</th>
+                                    <th>Descrição</th>
+                                    <th>Data de Validade</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="documentosTableBody">
+                                <!-- Documentos serão inseridos via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Férias Section -->
+                <section id="ferias" class="section">
+                    <div class="section-header">
+                        <h2>Gestão de Férias</h2>
+                        <p>Controle e acompanhamento de períodos de férias</p>
+                    </div>
+
+                    <div class="section-actions">
+                        <button class="btn btn-primary" id="addFerias">
+                            <i class="fas fa-plus"></i>
+                            Solicitar Férias
+                        </button>
+                        <div class="filters">
+                            <select id="statusFeriasFilter">
+                                <option value="">Todos os Status</option>
+                                <option value="pendente">Pendente</option>
+                                <option value="aprovado">Aprovado</option>
+                                <option value="negado">Negado</option>
+                                <option value="em_andamento">Em Andamento</option>
+                                <option value="concluido">Concluído</option>
+                            </select>
+                            <select id="anoFeriasFilter">
+                                <option value="">Todos os Anos</option>
+                                <option value="2024">2024</option>
+                                <option value="2023">2023</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="ferias-container" id="feriasContainer">
+                        <!-- Solicitações de férias serão inseridas via JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Configurações Section -->
+                <section id="configuracoes" class="section">
+                    <div class="section-header">
+                        <h2>Configurações</h2>
+                        <p>Configure o sistema de acordo com suas necessidades</p>
+                    </div>
+
+                    <div class="configuracoes-container">
+                        <div class="config-card">
+                            <h3>Configurações Gerais</h3>
+                            <form id="configGeraisForm">
+                                <div class="form-group">
+                                    <label>Nome da Empresa</label>
+                                    <input type="text" id="nomeEmpresa" value="Soft RH">
+                                </div>
+                                <div class="form-group">
+                                    <label>Email de Contato</label>
+                                    <input type="email" id="emailContato" value="contato@softrh.com.br">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                            </form>
+                        </div>
+
+                        <div class="config-card">
+                            <h3>Backup e Exportação</h3>
+                            <p>Faça backup dos dados ou exporte relatórios</p>
+                            <button class="btn btn-secondary" id="backupBtn">
+                                <i class="fas fa-download"></i>
+                                Fazer Backup
+                            </button>
+                            <button class="btn btn-secondary" id="exportarBtn">
+                                <i class="fas fa-file-export"></i>
+                                Exportar Dados
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal para Funcionários -->
+    <div class="modal" id="funcionarioModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="funcionarioModalTitle">Adicionar Funcionário</h3>
+                <button class="modal-close" id="closeFuncionarioModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="funcionarioForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="nome">Nome Completo *</label>
+                        <input type="text" id="nome" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email *</label>
+                        <input type="email" id="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cargo">Cargo *</label>
+                        <input type="text" id="cargo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="departamento">Departamento *</label>
+                        <select id="departamento" required>
+                            <option value="">Selecione...</option>
+                            <option value="TI">Tecnologia</option>
+                            <option value="RH">Recursos Humanos</option>
+                            <option value="Vendas">Vendas</option>
+                            <option value="Marketing">Marketing</option>
+                            <option value="Financeiro">Financeiro</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="dataAdmissao">Data de Admissão *</label>
+                        <input type="date" id="dataAdmissao" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="salario">Salário</label>
+                        <input type="number" id="salario" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="telefone">Telefone</label>
+                        <input type="tel" id="telefone">
+                    </div>
+                    <div class="form-group">
+                        <label for="status">Status</label>
+                        <select id="status">
+                            <option value="ativo">Ativo</option>
+                            <option value="ferias">De Férias</option>
+                            <option value="afastado">Afastado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelFuncionario">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Treinamentos -->
+    <div class="modal" id="treinamentoModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Novo Treinamento</h3>
+                <button class="modal-close" id="closeTreinamentoModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="treinamentoForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="funcionarioTreinamento">Funcionário *</label>
+                        <select id="funcionarioTreinamento" required>
+                            <option value="">Selecione um funcionário</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="tituloTreinamento">Título *</label>
+                        <input type="text" id="tituloTreinamento" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tipoTreinamento">Tipo *</label>
+                        <select id="tipoTreinamento" required>
+                            <option value="">Selecione o tipo</option>
+                            <option value="tecnico">Técnico</option>
+                            <option value="comportamental">Comportamental</option>
+                            <option value="integracao">Integração</option>
+                            <option value="seguranca">Segurança</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="dataTreinamento">Data *</label>
+                        <input type="date" id="dataTreinamento" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="descricaoTreinamento">Descrição *</label>
+                        <textarea id="descricaoTreinamento" rows="4" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelTreinamento">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Treinamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Avaliações -->
+    <div class="modal" id="avaliacaoModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="avaliacaoModalTitle">Nova Avaliação</h3>
+                <button class="modal-close" id="closeAvaliacaoModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="avaliacaoForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="funcionarioAvaliacao">Funcionário *</label>
+                        <select id="funcionarioAvaliacao" required>
+                            <option value="">Selecione um funcionário</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="tipoAvaliacao">Tipo de avaliação *</label>
+                        <select id="tipoAvaliacao" required>
+                            <option value="">Selecione o tipo</option>
+                            <option value="Avaliação Trimestral">Avaliação Trimestral</option>
+                            <option value="Avaliação Semestral">Avaliação Semestral</option>
+                            <option value="Avaliação Anual">Avaliação Anual</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="notaAvaliacao">Nota (0 a 10) *</label>
+                        <input type="number" id="notaAvaliacao" min="0" max="10" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="dataAvaliacao">Data *</label>
+                        <input type="date" id="dataAvaliacao" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="observacoesAvaliacao">Observações *</label>
+                        <textarea id="observacoesAvaliacao" rows="4" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelAvaliacao">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Avaliação</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Vagas -->
+    <div class="modal" id="vagaModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="vagaModalTitle">Nova Vaga</h3>
+                <button class="modal-close" id="closeVagaModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="vagaForm">
+                <div class="form-group">
+                    <label for="tituloVaga">Título da Vaga *</label>
+                    <input type="text" id="tituloVaga" required>
+                </div>
+                <div class="form-group">
+                    <label for="departamentoVaga">Departamento *</label>
+                    <select id="departamentoVaga" required>
+                        <option value="">Selecione...</option>
+                        <option value="TI">Tecnologia</option>
+                        <option value="RH">Recursos Humanos</option>
+                        <option value="Vendas">Vendas</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Financeiro">Financeiro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="descricaoVaga">Descrição *</label>
+                    <textarea id="descricaoVaga" rows="4" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="requisitosVaga">Requisitos</label>
+                    <textarea id="requisitosVaga" rows="3"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelVaga">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    </div>
+
+    <!-- Documento Modal -->
+    <div class="modal" id="documentoModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Adicionar Documento</h3>
+                <button class="modal-close" id="closeDocumentoModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="documentoForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="funcionarioDocumento">Funcionário *</label>
+                        <select id="funcionarioDocumento" required>
+                            <option value="">Selecione um funcionário</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="tipoDocumento">Tipo de Documento *</label>
+                        <select id="tipoDocumento" required>
+                            <option value="">Selecione o tipo</option>
+                            <option value="contrato">Contrato</option>
+                            <option value="rg">RG</option>
+                            <option value="cpf">CPF</option>
+                            <option value="cnh">CNH</option>
+                            <option value="certificado">Certificado</option>
+                            <option value="outro">Outro</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="descricaoDocumento">Descrição *</label>
+                        <input type="text" id="descricaoDocumento" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="dataValidade">Data de Validade</label>
+                        <input type="date" id="dataValidade">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="arquivoDocumento">Arquivo *</label>
+                        <input type="file" id="arquivoDocumento" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required>
+                        <small>Formatos aceitos: PDF, DOC, DOCX, JPG, PNG (máx. 10MB)</small>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelDocumento">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Férias Modal -->
+    <div class="modal" id="feriasModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Solicitar Férias</h3>
+                <button class="modal-close" id="closeFeriasModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="feriasForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="funcionarioFerias">Funcionário *</label>
+                        <select id="funcionarioFerias" required>
+                            <option value="">Selecione um funcionário</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="anoFerias">Ano de referência *</label>
+                        <select id="anoFerias" required>
+                            <option value="">Selecione o ano</option>
+                            <option value="2024">2024</option>
+                            <option value="2023">2023</option>
+                            <option value="2022">2022</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="dataInicioFerias">Data de início *</label>
+                        <input type="date" id="dataInicioFerias" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="dataFimFerias">Data de término *</label>
+                        <input type="date" id="dataFimFerias" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="diasFerias">Total de dias *</label>
+                        <input type="number" id="diasFerias" min="1" max="30" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tipoFerias">Tipo de férias *</label>
+                        <select id="tipoFerias" required>
+                            <option value="">Selecione o tipo</option>
+                            <option value="completa">Completa</option>
+                            <option value="parcial">Parcial</option>
+                            <option value="antecipacao">Antecipação</option>
+                            <option value="venda">Venda de 1/3</option>
+                        </select>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="observacoesFerias">Observações</label>
+                        <textarea id="observacoesFerias" rows="3" placeholder="Informações adicionais sobre a solicitação de férias"></textarea>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelFerias">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Solicitar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+        <script defer src="js/app.js"></script>
+        <script defer src="js/storage.js"></script>
+        <script defer src="js/funcionarios.js"></script>
+        <script defer src="js/recrutamento.js"></script>
+        <script defer src="js/dashboard.js"></script>
+        <script defer src="js/documentos.js"></script>
+        <script defer src="js/ferias.js"></script>
+    <script src="js/deckshop-safety.js" defer></script>
+</body>
+</html>

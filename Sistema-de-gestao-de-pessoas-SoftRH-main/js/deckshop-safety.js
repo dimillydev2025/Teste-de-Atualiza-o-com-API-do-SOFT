@@ -1,0 +1,32 @@
+/* deckshop-safety.js - injected patch to prevent DeckShop blocking */
+(function(){
+  const WATCHDOG_MS = 5000;
+  function startWatchdog(contextName){ const start=performance.now(); const id=setInterval(()=>{ if(performance.now()-start>WATCHDOG_MS){ window.dispatchEvent(new CustomEvent('deckshop:watchdog_timeout',{detail:{contextName}})); clearInterval(id); } },500); return id; }
+  function createCancelToken(){ return { cancelled:false }; }
+  function safeChunkedLoop(totalCount, work, token, options){
+    options = options || {};
+    const chunk = options.chunkSize || 200;
+    const delay = options.delayMs || 16;
+    let i=0; const wd = startWatchdog('safeChunkedLoop');
+    function step(){
+      if(token && token.cancelled){ clearInterval(wd); return; }
+      let start = performance.now(); let processed=0;
+      while(processed<chunk && i<totalCount){
+        try{ const r = work(i); if(r===false){ clearInterval(wd); return; } } catch(e){ console.error(e); clearInterval(wd); return; }
+        i++; processed++;
+        if(performance.now()-start>12) break;
+      }
+      if(i<totalCount && !(token && token.cancelled)) setTimeout(step, delay);
+      else clearInterval(wd);
+    }
+    setTimeout(step,0);
+    return token||createCancelToken();
+  }
+  function hideAddEmployeeInDeckshop(){
+    try{
+      document.querySelectorAll('.deckshop .btn-add-funcionario, .deckshop .add-funcionario, .btn-add-funcionario, .btn.add-funcionario').forEach(el=>{ el.style.display='none'; el.setAttribute('aria-hidden','true'); });
+    }catch(e){ console.warn(e); }
+  }
+  window.DeckshopSafety = { safeChunkedLoop, createCancelToken, hideAddEmployeeInDeckshop };
+  document.addEventListener('DOMContentLoaded', ()=>{ hideAddEmployeeInDeckshop(); window.addEventListener('deckshop:entered', hideAddEmployeeInDeckshop); window.addEventListener('deckshop:watchdog_timeout',(e)=>{ try{ const c = document.querySelector('.deckshop') || document.getElementById('deckshopContainer'); if(c){ const note=document.createElement('div'); note.className='deckshop-error-notice'; note.textContent='Operação interrompida por segurança: processamento muito longo.'; c.prepend(note); } }catch(err){console.error(err);} }); });
+})();
